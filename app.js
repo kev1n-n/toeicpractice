@@ -84,9 +84,9 @@ class TOEICApp {
     }
     // For Part 2-4, read context (dialogue/monologue) and question
     else if ([2, 3, 4].includes(this.currentPart)) {
-      if (question.context) {
-        text = question.context.replace(/W:|M:/g, '').replace(/\n/g, ' ') + '. ';
-      }
+      if (question.context && !this.isAudioPart(this.currentPart)) {
+      html += `<div class="question-context">${question.context.replace(/\n/g, '<br>')}</div>`;
+      }  
       text += 'Question: ' + question.question + '. ';
       const letters = ['A', 'B', 'C'];
       if (question.options.length === 4) letters.push('D');
