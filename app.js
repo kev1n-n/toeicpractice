@@ -73,7 +73,6 @@ class TOEICApp {
   getTextToSpeak(question) {
     let text = '';
     
-    // For Part 1, read the context description and options
     if (this.currentPart === 1) {
       text = question.context.replace(/\[照片：|]/g, '') + '. ';
       text += 'Question: ' + question.question + '. ';
@@ -82,7 +81,6 @@ class TOEICApp {
         text += letters[i] + '. ' + opt + '. ';
       });
     }
-    // For Part 2-4, read context (dialogue/monologue) and question
     else if ([2, 3, 4].includes(this.currentPart)) {
       if (question.context) {
         text = question.context.replace(/W:|M:/g, '').replace(/\n/g, ' ') + '. ';
@@ -111,7 +109,6 @@ class TOEICApp {
     utterance.rate = this.speechRate;
     utterance.pitch = 1;
     
-    // Try to get a good English voice
     const voices = this.synth.getVoices();
     const englishVoice = voices.find(v => v.lang.includes('en') && v.name.includes('Google')) ||
                          voices.find(v => v.lang.includes('en-US')) ||
@@ -220,13 +217,13 @@ class TOEICApp {
 
     let html = `<span class="question-type">${question.type}</span>`;
     
-    // Add audio player for Part 1-4
+    // Part 1-4: 顯示音訊播放器
     if (this.isAudioPart(this.currentPart)) {
       html += `
         <div class="audio-player">
           <button class="btn-play" id="btn-play-audio">▶</button>
           <div class="audio-info">
-            <div class="audio-label">🔊 聽力題目（請用聽的，答題後顯示原文）</div>
+            <div class="audio-label">🔊 聽力題目</div>
             <div class="audio-status" id="audio-status">點擊播放</div>
           </div>
           <div class="speed-control">
@@ -239,15 +236,16 @@ class TOEICApp {
           </div>
         </div>
       `;
-    }
-    
-    // Part 1-4: 隱藏聽力內容，只能用聽的
-    // Part 5-7: 顯示閱讀內容
-    if (question.context && !this.isAudioPart(this.currentPart)) {
-      html += `<div class="question-context">${question.context.replace(/\n/g, '<br>')}</div>`;
+      // Part 1-4: 隱藏內容和問題，只顯示提示
+      html += `<p class="question-text" style="color: var(--text-secondary); font-style: italic; text-align: center;">🎧 請點擊播放按鈕聽題目後作答</p>`;
+    } else {
+      // Part 5-7: 顯示閱讀內容和問題
+      if (question.context) {
+        html += `<div class="question-context">${question.context.replace(/\n/g, '<br>')}</div>`;
+      }
+      html += `<p class="question-text">${question.question}</p>`;
     }
 
-    html += `<p class="question-text">${question.question}</p>`;
     html += '<div class="options">';
 
     const letters = ['A', 'B', 'C', 'D'];
@@ -281,7 +279,6 @@ class TOEICApp {
         this.speechRate = parseFloat(e.target.value);
       });
 
-      // Load voices
       if (this.synth.getVoices().length === 0) {
         this.synth.addEventListener('voiceschanged', () => {}, { once: true });
       }
@@ -316,13 +313,17 @@ class TOEICApp {
     const feedbackArea = document.getElementById('feedback-area');
     const letters = ['A', 'B', 'C', 'D'];
     
-    // 答題後顯示聽力原文
+    // 答題後顯示聽力原文和問題
     let transcriptHtml = '';
-    if (this.isAudioPart(this.currentPart) && question.context) {
+    if (this.isAudioPart(this.currentPart)) {
       transcriptHtml = `
         <div style="background: var(--bg-dark); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #22c55e;">
           <strong style="color: #22c55e;">📝 聽力原文：</strong><br><br>
-          <span style="color: var(--text-secondary); line-height: 1.8;">${question.context.replace(/\n/g, '<br>')}</span>
+          <span style="color: var(--text-secondary); line-height: 1.8;">${question.context ? question.context.replace(/\n/g, '<br>') : ''}</span>
+        </div>
+        <div style="background: var(--bg-dark); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #6366f1;">
+          <strong style="color: #6366f1;">❓ 題目：</strong><br><br>
+          <span style="color: var(--text-primary);">${question.question}</span>
         </div>
       `;
     }
