@@ -1,4 +1,4 @@
-// TOEIC Practice App
+// TOEIC Practice App with TTS
 class TOEICApp {
   constructor() {
     this.currentView = 'home';
@@ -7,6 +7,9 @@ class TOEICApp {
     this.currentQuestionIndex = 0;
     this.answers = [];
     this.calendarDate = new Date();
+    this.synth = window.speechSynthesis;
+    this.isSpeaking = false;
+    this.speechRate = 0.9;
     this.init();
   }
 
@@ -33,11 +36,13 @@ class TOEICApp {
 
     document.getElementById('back-to-home').addEventListener('click', () => {
       if (confirm('確定要離開嗎？練習進度將不會保存。')) {
+        this.stopSpeaking();
         this.switchView('home');
       }
     });
 
     document.getElementById('btn-next').addEventListener('click', () => {
+      this.stopSpeaking();
       this.nextQuestion();
     });
 
@@ -60,6 +65,100 @@ class TOEICApp {
     });
   }
 
+  // TTS Functions
+  isAudioPart(part) {
+    return [1, 2, 3, 4].includes(part);
+  }
+
+  getTextToSpeak(question) {
+    let text = '';
+    
+    // For Part 1, read the context description and options
+    if (this.currentPart === 1) {
+      text = question.context.replace(/\[照片：|]/g, '') + '. ';
+      text += 'Question: ' + question.question + '. ';
+      const letters = ['A', 'B', 'C', 'D'];
+      question.options.forEach((opt, i) => {
+        text += letters[i] + '. ' + opt + '. ';
+      });
+    }
+    // For Part 2-4, read context (dialogue/monologue) and question
+    else if ([2, 3, 4].includes(this.currentPart)) {
+      if (question.context) {
+        text = question.context.replace(/W:|M:/g, '').replace(/\n/g, ' ') + '. ';
+      }
+      text += 'Question: ' + question.question + '. ';
+      const letters = ['A', 'B', 'C'];
+      if (question.options.length === 4) letters.push('D');
+      question.options.forEach((opt, i) => {
+        text += letters[i] + '. ' + opt + '. ';
+      });
+    }
+    
+    return text;
+  }
+
+  speak(text) {
+    if (!this.synth) {
+      console.warn('Speech synthesis not supported');
+      return;
+    }
+
+    this.stopSpeaking();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = this.speechRate;
+    utterance.pitch = 1;
+    
+    // Try to get a good English voice
+    const voices = this.synth.getVoices();
+    const englishVoice = voices.find(v => v.lang.includes('en') && v.name.includes('Google')) ||
+                         voices.find(v => v.lang.includes('en-US')) ||
+                         voices.find(v => v.lang.includes('en'));
+    if (englishVoice) {
+      utterance.voice = englishVoice;
+    }
+
+    utterance.onstart = () => {
+      this.isSpeaking = true;
+      this.updatePlayButton(true);
+    };
+
+    utterance.onend = () => {
+      this.isSpeaking = false;
+      this.updatePlayButton(false);
+    };
+
+    utterance.onerror = () => {
+      this.isSpeaking = false;
+      this.updatePlayButton(false);
+    };
+
+    this.synth.speak(utterance);
+  }
+
+  stopSpeaking() {
+    if (this.synth) {
+      this.synth.cancel();
+      this.isSpeaking = false;
+      this.updatePlayButton(false);
+    }
+  }
+
+  updatePlayButton(isPlaying) {
+    const btn = document.getElementById('btn-play-audio');
+    const status = document.getElementById('audio-status');
+    if (btn) {
+      btn.classList.toggle('playing', isPlaying);
+      btn.innerHTML = isPlaying ? '⏹' : '▶';
+    }
+    if (status) {
+      status.textContent = isPlaying ? '播放中...' : '點擊播放';
+      status.classList.toggle('playing', isPlaying);
+    }
+  }
+
   switchView(view) {
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === view);
@@ -77,6 +176,7 @@ class TOEICApp {
     this.currentPart = part;
     this.currentQuestionIndex = 0;
     this.answers = [];
+    this.stopSpeaking();
 
     const allQuestions = questionBank[part] || [];
     const today = this.getDateString(new Date());
@@ -120,6 +220,27 @@ class TOEICApp {
 
     let html = `<span class="question-type">${question.type}</span>`;
     
+    // Add audio player for Part 1-4
+    if (this.isAudioPart(this.currentPart)) {
+      html += `
+        <div class="audio-player">
+          <button class="btn-play" id="btn-play-audio">▶</button>
+          <div class="audio-info">
+            <div class="audio-label">🔊 聽力題目</div>
+            <div class="audio-status" id="audio-status">點擊播放</div>
+          </div>
+          <div class="speed-control">
+            <label>速度:</label>
+            <select id="speech-rate">
+              <option value="0.7">慢速</option>
+              <option value="0.9" selected>正常</option>
+              <option value="1.1">快速</option>
+            </select>
+          </div>
+        </div>
+      `;
+    }
+    
     if (question.context) {
       html += `<div class="question-context">${question.context.replace(/\n/g, '<br>')}</div>`;
     }
@@ -140,6 +261,30 @@ class TOEICApp {
     html += '</div>';
     questionArea.innerHTML = html;
 
+    // Bind audio player events
+    if (this.isAudioPart(this.currentPart)) {
+      const playBtn = document.getElementById('btn-play-audio');
+      const rateSelect = document.getElementById('speech-rate');
+      
+      playBtn.addEventListener('click', () => {
+        if (this.isSpeaking) {
+          this.stopSpeaking();
+        } else {
+          const text = this.getTextToSpeak(question);
+          this.speak(text);
+        }
+      });
+      
+      rateSelect.addEventListener('change', (e) => {
+        this.speechRate = parseFloat(e.target.value);
+      });
+
+      // Load voices
+      if (this.synth.getVoices().length === 0) {
+        this.synth.addEventListener('voiceschanged', () => {}, { once: true });
+      }
+    }
+
     document.querySelectorAll('.option').forEach(option => {
       option.addEventListener('click', (e) => {
         this.selectAnswer(parseInt(e.currentTarget.dataset.index));
@@ -150,6 +295,8 @@ class TOEICApp {
   selectAnswer(selectedIndex) {
     const question = this.currentQuestions[this.currentQuestionIndex];
     const isCorrect = selectedIndex === question.answer;
+    
+    this.stopSpeaking();
     
     this.answers.push({
       questionId: question.id,
