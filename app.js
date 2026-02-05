@@ -84,9 +84,9 @@ class TOEICApp {
     }
     // For Part 2-4, read context (dialogue/monologue) and question
     else if ([2, 3, 4].includes(this.currentPart)) {
-      if (question.context && !this.isAudioPart(this.currentPart)) {
-      html += `<div class="question-context">${question.context.replace(/\n/g, '<br>')}</div>`;
-      }  
+      if (question.context) {
+        text = question.context.replace(/W:|M:/g, '').replace(/\n/g, ' ') + '. ';
+      }
       text += 'Question: ' + question.question + '. ';
       const letters = ['A', 'B', 'C'];
       if (question.options.length === 4) letters.push('D');
@@ -226,7 +226,7 @@ class TOEICApp {
         <div class="audio-player">
           <button class="btn-play" id="btn-play-audio">▶</button>
           <div class="audio-info">
-            <div class="audio-label">🔊 聽力題目</div>
+            <div class="audio-label">🔊 聽力題目（請用聽的，答題後顯示原文）</div>
             <div class="audio-status" id="audio-status">點擊播放</div>
           </div>
           <div class="speed-control">
@@ -241,7 +241,9 @@ class TOEICApp {
       `;
     }
     
-    if (question.context) {
+    // Part 1-4: 隱藏聽力內容，只能用聽的
+    // Part 5-7: 顯示閱讀內容
+    if (question.context && !this.isAudioPart(this.currentPart)) {
       html += `<div class="question-context">${question.context.replace(/\n/g, '<br>')}</div>`;
     }
 
@@ -314,10 +316,22 @@ class TOEICApp {
     const feedbackArea = document.getElementById('feedback-area');
     const letters = ['A', 'B', 'C', 'D'];
     
+    // 答題後顯示聽力原文
+    let transcriptHtml = '';
+    if (this.isAudioPart(this.currentPart) && question.context) {
+      transcriptHtml = `
+        <div style="background: var(--bg-dark); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #22c55e;">
+          <strong style="color: #22c55e;">📝 聽力原文：</strong><br><br>
+          <span style="color: var(--text-secondary); line-height: 1.8;">${question.context.replace(/\n/g, '<br>')}</span>
+        </div>
+      `;
+    }
+    
     feedbackArea.innerHTML = `
       <div class="feedback-header ${isCorrect ? 'correct' : 'wrong'}">
         ${isCorrect ? '✓ 正確！' : '✗ 錯誤'}
       </div>
+      ${transcriptHtml}
       <div class="feedback-explanation">
         <strong>正確答案：${letters[question.answer]}</strong><br><br>
         ${question.explanation}
