@@ -65,7 +65,6 @@ class TOEICApp {
     });
   }
 
-  // TTS Functions
   isAudioPart(part) {
     return [1, 2, 3, 4].includes(part);
   }
@@ -97,11 +96,7 @@ class TOEICApp {
   }
 
   speak(text) {
-    if (!this.synth) {
-      console.warn('Speech synthesis not supported');
-      return;
-    }
-
+    if (!this.synth) return;
     this.stopSpeaking();
     
     const utterance = new SpeechSynthesisUtterance(text);
@@ -113,24 +108,11 @@ class TOEICApp {
     const englishVoice = voices.find(v => v.lang.includes('en') && v.name.includes('Google')) ||
                          voices.find(v => v.lang.includes('en-US')) ||
                          voices.find(v => v.lang.includes('en'));
-    if (englishVoice) {
-      utterance.voice = englishVoice;
-    }
+    if (englishVoice) utterance.voice = englishVoice;
 
-    utterance.onstart = () => {
-      this.isSpeaking = true;
-      this.updatePlayButton(true);
-    };
-
-    utterance.onend = () => {
-      this.isSpeaking = false;
-      this.updatePlayButton(false);
-    };
-
-    utterance.onerror = () => {
-      this.isSpeaking = false;
-      this.updatePlayButton(false);
-    };
+    utterance.onstart = () => { this.isSpeaking = true; this.updatePlayButton(true); };
+    utterance.onend = () => { this.isSpeaking = false; this.updatePlayButton(false); };
+    utterance.onerror = () => { this.isSpeaking = false; this.updatePlayButton(false); };
 
     this.synth.speak(utterance);
   }
@@ -160,9 +142,7 @@ class TOEICApp {
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === view);
     });
-    document.querySelectorAll('.view').forEach(v => {
-      v.classList.remove('active');
-    });
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(`${view}-view`).classList.add('active');
     this.currentView = view;
     if (view === 'calendar') this.renderCalendar();
@@ -217,7 +197,6 @@ class TOEICApp {
 
     let html = `<span class="question-type">${question.type}</span>`;
     
-    // Part 1-4: 顯示音訊播放器
     if (this.isAudioPart(this.currentPart)) {
       html += `
         <div class="audio-player">
@@ -236,10 +215,8 @@ class TOEICApp {
           </div>
         </div>
       `;
-      // Part 1-4: 隱藏內容和問題，只顯示提示
       html += `<p class="question-text" style="color: var(--text-secondary); font-style: italic; text-align: center;">🎧 請點擊播放按鈕聽題目後作答</p>`;
     } else {
-      // Part 5-7: 顯示閱讀內容和問題
       if (question.context) {
         html += `<div class="question-context">${question.context.replace(/\n/g, '<br>')}</div>`;
       }
@@ -247,7 +224,6 @@ class TOEICApp {
     }
 
     html += '<div class="options">';
-
     const letters = ['A', 'B', 'C', 'D'];
     question.options.forEach((option, index) => {
       html += `
@@ -257,11 +233,9 @@ class TOEICApp {
         </div>
       `;
     });
-
     html += '</div>';
     questionArea.innerHTML = html;
 
-    // Bind audio player events
     if (this.isAudioPart(this.currentPart)) {
       const playBtn = document.getElementById('btn-play-audio');
       const rateSelect = document.getElementById('speech-rate');
@@ -270,18 +244,13 @@ class TOEICApp {
         if (this.isSpeaking) {
           this.stopSpeaking();
         } else {
-          const text = this.getTextToSpeak(question);
-          this.speak(text);
+          this.speak(this.getTextToSpeak(question));
         }
       });
       
       rateSelect.addEventListener('change', (e) => {
         this.speechRate = parseFloat(e.target.value);
       });
-
-      if (this.synth.getVoices().length === 0) {
-        this.synth.addEventListener('voiceschanged', () => {}, { once: true });
-      }
     }
 
     document.querySelectorAll('.option').forEach(option => {
@@ -313,7 +282,7 @@ class TOEICApp {
     const feedbackArea = document.getElementById('feedback-area');
     const letters = ['A', 'B', 'C', 'D'];
     
-    // 答題後顯示聽力原文和問題
+    // 顯示原文（聽力題）
     let transcriptHtml = '';
     if (this.isAudioPart(this.currentPart)) {
       transcriptHtml = `
@@ -327,12 +296,24 @@ class TOEICApp {
         </div>
       `;
     }
+
+    // 顯示中文翻譯（所有Part）
+    let translationHtml = '';
+    if (question.translation) {
+      translationHtml = `
+        <div style="background: var(--bg-dark); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f59e0b;">
+          <strong style="color: #f59e0b;">🔤 中文翻譯：</strong><br><br>
+          <span style="color: var(--text-secondary); line-height: 1.8;">${question.translation.replace(/\n/g, '<br>')}</span>
+        </div>
+      `;
+    }
     
     feedbackArea.innerHTML = `
       <div class="feedback-header ${isCorrect ? 'correct' : 'wrong'}">
         ${isCorrect ? '✓ 正確！' : '✗ 錯誤'}
       </div>
       ${transcriptHtml}
+      ${translationHtml}
       <div class="feedback-explanation">
         <strong>正確答案：${letters[question.answer]}</strong><br><br>
         ${question.explanation}
@@ -357,12 +338,10 @@ class TOEICApp {
   showResults() {
     const correctCount = this.answers.filter(a => a.isCorrect).length;
     const totalQuestions = this.answers.length;
-
     this.saveSession();
 
     document.getElementById('practice-view').classList.remove('active');
     document.getElementById('results-view').classList.add('active');
-
     document.getElementById('final-score').textContent = correctCount;
     
     const percentage = (correctCount / totalQuestions) * 100;
@@ -428,11 +407,7 @@ class TOEICApp {
       const dateString = this.getDateString(new Date(year, month, day));
       const hasPractice = history[dateString] && history[dateString].length > 0;
       const isToday = dateString === todayString;
-
-      html += `
-        <div class="cal-day ${isToday ? 'today' : ''} ${hasPractice ? 'has-practice' : ''}" 
-             data-date="${dateString}">${day}</div>
-      `;
+      html += `<div class="cal-day ${isToday ? 'today' : ''} ${hasPractice ? 'has-practice' : ''}" data-date="${dateString}">${day}</div>`;
     }
 
     const remainingDays = 42 - (startDay + daysInMonth);
@@ -443,10 +418,7 @@ class TOEICApp {
     document.getElementById('calendar-days').innerHTML = html;
 
     document.querySelectorAll('.cal-day:not(.other-month)').forEach(day => {
-      day.addEventListener('click', (e) => {
-        const date = e.target.dataset.date;
-        this.showDayReview(date);
-      });
+      day.addEventListener('click', (e) => this.showDayReview(e.target.dataset.date));
     });
   }
 
@@ -457,137 +429,79 @@ class TOEICApp {
     const reviewContent = document.getElementById('review-content');
 
     const date = new Date(dateString);
-    const displayDate = `${date.getMonth() + 1}月${date.getDate()}日`;
-    document.getElementById('review-date').textContent = displayDate;
+    document.getElementById('review-date').textContent = `${date.getMonth() + 1}月${date.getDate()}日`;
 
     if (sessions.length === 0) {
       reviewContent.innerHTML = '<p style="color: var(--text-secondary);">這天沒有練習紀錄</p>';
     } else {
-      let html = '';
-      sessions.forEach((session, index) => {
+      const partNames = {1:'Part 1 照片描述',2:'Part 2 應答問題',3:'Part 3 簡短對話',4:'Part 4 簡短獨白',5:'Part 5 句子填空',6:'Part 6 段落填空',7:'Part 7 閱讀理解'};
+      reviewContent.innerHTML = sessions.map((session, index) => {
         const correctCount = session.questions.filter(q => q.isCorrect).length;
-        const totalCount = session.questions.length;
-        const partNames = {
-          1: 'Part 1 照片描述', 2: 'Part 2 應答問題', 3: 'Part 3 簡短對話',
-          4: 'Part 4 簡短獨白', 5: 'Part 5 句子填空', 6: 'Part 6 段落填空', 7: 'Part 7 閱讀理解'
-        };
-
-        html += `
+        return `
           <div class="review-session">
             <div class="review-session-header">
               <span class="review-session-part">${partNames[session.part]}</span>
-              <span class="review-session-score">${correctCount}/${totalCount} 正確</span>
+              <span class="review-session-score">${correctCount}/${session.questions.length} 正確</span>
             </div>
             <button class="review-btn" data-date="${dateString}" data-index="${index}">複習這次練習</button>
           </div>
         `;
-      });
-      reviewContent.innerHTML = html;
+      }).join('');
 
       document.querySelectorAll('.review-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const date = e.target.dataset.date;
-          const index = parseInt(e.target.dataset.index);
-          this.startReview(date, index);
-        });
+        btn.addEventListener('click', (e) => this.startReview(e.target.dataset.date, parseInt(e.target.dataset.index)));
       });
     }
-
     reviewPanel.style.display = 'block';
   }
 
   startReview(dateString, sessionIndex) {
-    const history = this.getHistory();
-    const session = history[dateString][sessionIndex];
-    
+    const session = this.getHistory()[dateString][sessionIndex];
     const allQuestions = questionBank[session.part];
-    this.currentQuestions = session.questions.map(q => {
-      return allQuestions.find(original => original.id === q.id);
-    }).filter(q => q);
-
-    if (this.currentQuestions.length === 0) {
-      alert('找不到題目資料');
-      return;
-    }
-
+    this.currentQuestions = session.questions.map(q => allQuestions.find(orig => orig.id === q.id)).filter(q => q);
+    if (this.currentQuestions.length === 0) { alert('找不到題目資料'); return; }
     this.currentPart = session.part;
     this.currentQuestionIndex = 0;
     this.answers = [];
-
     this.switchView('practice');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     this.renderQuestion();
   }
 
-  getHistory() {
-    const data = localStorage.getItem('toeic-history');
-    return data ? JSON.parse(data) : {};
-  }
+  getHistory() { return JSON.parse(localStorage.getItem('toeic-history') || '{}'); }
 
   saveSession() {
     const history = this.getHistory();
     const today = this.getDateString(new Date());
-
     if (!history[today]) history[today] = [];
-
     history[today].push({
       part: this.currentPart,
       timestamp: Date.now(),
-      questions: this.answers.map((answer, index) => ({
-        id: this.currentQuestions[index].id,
-        isCorrect: answer.isCorrect
-      }))
+      questions: this.answers.map((answer, index) => ({ id: this.currentQuestions[index].id, isCorrect: answer.isCorrect }))
     });
-
     localStorage.setItem('toeic-history', JSON.stringify(history));
     this.updateStatsDisplay();
   }
 
   loadStats() {
     const history = this.getHistory();
-    let totalPracticed = 0;
-    let totalCorrect = 0;
-
-    Object.values(history).forEach(daySessions => {
-      daySessions.forEach(session => {
-        session.questions.forEach(q => {
-          totalPracticed++;
-          if (q.isCorrect) totalCorrect++;
-        });
-      });
-    });
-
-    return {
-      totalPracticed,
-      accuracy: totalPracticed > 0 ? Math.round((totalCorrect / totalPracticed) * 100) : 0,
-      streakDays: this.calculateStreak(history)
-    };
+    let totalPracticed = 0, totalCorrect = 0;
+    Object.values(history).forEach(day => day.forEach(session => session.questions.forEach(q => { totalPracticed++; if (q.isCorrect) totalCorrect++; })));
+    return { totalPracticed, accuracy: totalPracticed > 0 ? Math.round((totalCorrect / totalPracticed) * 100) : 0, streakDays: this.calculateStreak(history) };
   }
 
   calculateStreak(history) {
     const dates = Object.keys(history).sort().reverse();
     if (dates.length === 0) return 0;
-
-    let streak = 0;
     const today = this.getDateString(new Date());
     const yesterday = this.getDateString(new Date(Date.now() - 86400000));
-
     if (dates[0] !== today && dates[0] !== yesterday) return 0;
-
+    let streak = 0;
     for (let i = 0; i < dates.length; i++) {
-      const currentDate = new Date(dates[i]);
       const expectedDate = new Date();
-      expectedDate.setDate(expectedDate.getDate() - i);
-      
-      if (dates[0] === yesterday) expectedDate.setDate(expectedDate.getDate() - 1);
-
-      if (this.getDateString(currentDate) === this.getDateString(expectedDate)) {
-        streak++;
-      } else {
-        break;
-      }
+      expectedDate.setDate(expectedDate.getDate() - i - (dates[0] === yesterday ? 1 : 0));
+      if (dates[i] === this.getDateString(expectedDate)) streak++; else break;
     }
-
     return streak;
   }
 
@@ -598,9 +512,7 @@ class TOEICApp {
     document.getElementById('streak-days').textContent = stats.streakDays;
   }
 
-  getDateString(date) {
-    return date.toISOString().split('T')[0];
-  }
+  getDateString(date) { return date.toISOString().split('T')[0]; }
 
   shuffleArray(array) {
     const shuffled = [...array];
@@ -612,6 +524,11 @@ class TOEICApp {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  window.app = new TOEICApp();
-});
+document.addEventListener('DOMContentLoaded', () => { window.app = new TOEICApp(); });
+```
+
+---
+
+**這是 `app.js`** ✅
+
+說「繼續」我開始貼有翻譯的 `questions.js`（會分幾段）！
