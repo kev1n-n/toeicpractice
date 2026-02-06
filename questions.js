@@ -1,8 +1,4 @@
 
-## 📄 `questions.js` 有翻譯版 (Part 1/4)
-
-```javascript
-// TOEIC 800分程度題庫 - 含中文翻譯
 const questionBank = {
   // Part 1: 照片描述 (36題)
   1: [
