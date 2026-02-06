@@ -1,4 +1,4 @@
-```javascript
+
 // TOEIC 800分程度題庫 - 含中文翻譯
 const questionBank = {
   // Part 1: 照片描述 (36題)
@@ -276,3 +276,6 @@ const questionBank = {
     {id:"p7_036",type:"Part 7 - 閱讀理解",context:"ARTICLE\n\nLocal Business Wins Innovation Award\n\nGreenTech Solutions, a startup based in Springfield, has been named this year's recipient of the Regional Innovation Award. The company, founded just three years ago, develops sustainable packaging solutions for the food industry.\n\n\"We're honored to receive this recognition,\" said CEO Maria Santos. \"Our team has worked hard to create products that reduce environmental impact while remaining cost-effective for businesses.\"\n\nThe award includes a $50,000 grant to support further research and development.",question:"What is included with the award?",options:["A trophy","A $50,000 grant","Free advertising","Office space"],answer:1,explanation:"獎項包含 $50,000 補助金 (a $50,000 grant)。",translation:"問：獎項包含什麼？\nA. 獎盃\nB. 50,000美元補助金\nC. 免費廣告\nD. 辦公空間"}
   ]
 };
+```
+
+---
