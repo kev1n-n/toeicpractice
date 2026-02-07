@@ -347,13 +347,14 @@ class TOEICApp {
   }
   
   showResults() {
-    const correctCount = this.answers.filter(a => a.isCorrect).length;
+    const correctCount = this.answers.filter(a => a.isCorrect || a.correct).length;
     const totalQuestions = this.answers.length;
     this.saveSession();
 
     document.getElementById('practice-view').classList.remove('active');
     document.getElementById('results-view').classList.add('active');
     document.getElementById('final-score').textContent = correctCount;
+    document.getElementById('score-total').textContent = '/' + totalQuestions;
     
     const percentage = (correctCount / totalQuestions) * 100;
     let message = '';
@@ -364,29 +365,62 @@ class TOEICApp {
     
     document.getElementById('score-message').textContent = message;
 
-    const detailHtml = this.answers.map((answer, index) => {
-      const question = this.currentQuestions[index];
-      const letters = ['A', 'B', 'C', 'D'];
-      
-      return `
-        <div class="result-item">
-          <div class="result-item-header">
-            <span class="result-status ${answer.isCorrect ? 'correct' : 'wrong'}">
-              ${answer.isCorrect ? '✓' : '✗'}
-            </span>
-            <span>第 ${index + 1} 題</span>
+    let detailHtml = '';
+    
+    // 單字練習的結果顯示
+    if (this.currentPart === 'vocab' || this.currentPart === 'wrong-words') {
+      detailHtml = this.answers.map((answer, index) => {
+        const isCorrect = answer.correct;
+        const question = answer.question;
+        
+        return `
+          <div class="result-item">
+            <div class="result-item-header">
+              <span class="result-status ${isCorrect ? 'correct' : 'wrong'}">
+                ${isCorrect ? '✓' : '✗'}
+              </span>
+              <span>第 ${index + 1} 題</span>
+            </div>
+            <p class="result-question"><strong>${question.word}</strong></p>
+            ${!isCorrect ? `
+              <p class="result-answer">
+                你的答案：<span class="your-answer">${answer.selected}</span><br>
+                正確答案：<span class="correct-answer">${question.meaning}</span>
+              </p>
+            ` : `
+              <p class="result-answer">
+                <span class="correct-answer">✓ ${question.meaning}</span>
+              </p>
+            `}
           </div>
-          <p class="result-question">${question.question}</p>
-          ${!answer.isCorrect ? `
-            <p class="result-answer">
-              你的答案：<span class="your-answer">${letters[answer.selected]}. ${question.options[answer.selected]}</span><br>
-              正確答案：<span class="correct-answer">${letters[answer.correct]}. ${question.options[answer.correct]}</span>
-            </p>
-          ` : ''}
-          <div class="result-explanation">💡 ${question.explanation}</div>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
+    } else {
+      // 原本 Part 1-7 的結果顯示
+      const letters = ['A', 'B', 'C', 'D'];
+      detailHtml = this.answers.map((answer, index) => {
+        const question = this.currentQuestions[index];
+        
+        return `
+          <div class="result-item">
+            <div class="result-item-header">
+              <span class="result-status ${answer.isCorrect ? 'correct' : 'wrong'}">
+                ${answer.isCorrect ? '✓' : '✗'}
+              </span>
+              <span>第 ${index + 1} 題</span>
+            </div>
+            <p class="result-question">${question.question}</p>
+            ${!answer.isCorrect ? `
+              <p class="result-answer">
+                你的答案：<span class="your-answer">${letters[answer.selected]}. ${question.options[answer.selected]}</span><br>
+                正確答案：<span class="correct-answer">${letters[answer.correct]}. ${question.options[answer.correct]}</span>
+              </p>
+            ` : ''}
+            <div class="result-explanation">💡 ${question.explanation}</div>
+          </div>
+        `;
+      }).join('');
+    }
 
     document.getElementById('results-detail').innerHTML = detailHtml;
   }
