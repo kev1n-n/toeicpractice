@@ -525,10 +525,4 @@ class TOEICApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => { window.app = new TOEICApp(); });
-```
 
----
-
-**這是 `app.js`** ✅
-
-說「繼續」我開始貼有翻譯的 `questions.js`（會分幾段）！
