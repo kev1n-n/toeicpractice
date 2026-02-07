@@ -11,6 +11,7 @@ class TOEICApp {
     this.isSpeaking = false;
     this.speechRate = 0.9;
     this.init();
+    this.wrongWords = JSON.parse(localStorage.getItem('wrongWords') || '[]');
   }
 
   init() {
@@ -27,10 +28,16 @@ class TOEICApp {
       });
     });
 
-    document.querySelectorAll('.part-card').forEach(card => {
+   document.querySelectorAll('.part-card').forEach(card => {
       card.addEventListener('click', (e) => {
         const part = e.currentTarget.dataset.part;
-        this.startPractice(parseInt(part));
+        if (part === 'vocab') {
+          this.startVocabPractice();
+        } else if (part === 'wrong-words') {
+          this.startWrongWordsPractice();
+        } else {
+          this.startPractice(parseInt(part));
+        }
       });
     });
 
@@ -326,15 +333,19 @@ class TOEICApp {
       this.currentQuestionIndex < this.currentQuestions.length - 1 ? '下一題 →' : '查看結果';
   }
 
-  nextQuestion() {
+    nextQuestion() {
     this.currentQuestionIndex++;
     if (this.currentQuestionIndex >= this.currentQuestions.length) {
       this.showResults();
     } else {
-      this.renderQuestion();
+      if (this.currentPart === 'vocab' || this.currentPart === 'wrong-words') {
+        this.showVocabQuestion();
+      } else {
+        this.showQuestion();
+      }
     }
   }
-
+  
   showResults() {
     const correctCount = this.answers.filter(a => a.isCorrect).length;
     const totalQuestions = this.answers.length;
@@ -514,6 +525,113 @@ class TOEICApp {
 
   getDateString(date) { return date.toISOString().split('T')[0]; }
 
+ // ========== 單字練習功能 ==========
+  
+  startVocabPractice() {
+    this.currentPart = 'vocab';
+    this.currentQuestions = this.shuffleArray([...vocabularyBank]).slice(0, 10);
+    this.currentQuestionIndex = 0;
+    this.answers = [];
+    this.switchView('practice');
+    this.showVocabQuestion();
+  }
+
+  startWrongWordsPractice() {
+    if (this.wrongWords.length === 0) {
+      alert('目前沒有錯題！繼續練習單字吧！');
+      return;
+    }
+    this.currentPart = 'wrong-words';
+    this.currentQuestions = this.shuffleArray([...this.wrongWords]).slice(0, Math.min(10, this.wrongWords.length));
+    this.currentQuestionIndex = 0;
+    this.answers = [];
+    this.switchView('practice');
+    this.showVocabQuestion();
+  }
+
+  showVocabQuestion() {
+    const question = this.currentQuestions[this.currentQuestionIndex];
+    const questionArea = document.getElementById('question-area');
+    const shuffledOptions = this.shuffleArray([...question.options]);
+    
+    document.getElementById('current-question').textContent = this.currentQuestionIndex + 1;
+    document.getElementById('total-questions').textContent = this.currentQuestions.length;
+    document.getElementById('progress-fill').style.width = 
+      ((this.currentQuestionIndex + 1) / this.currentQuestions.length * 100) + '%';
+    
+    questionArea.innerHTML = `
+      <div class="vocab-question">
+        <div class="vocab-word">${question.word}</div>
+        <p class="vocab-prompt">請選擇正確的中文意思：</p>
+        <div class="options-grid">
+          ${shuffledOptions.map((opt, i) => `
+            <button class="option-btn" data-answer="${opt}">
+              ${String.fromCharCode(65 + i)}. ${opt}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('feedback-area').style.display = 'none';
+    document.getElementById('btn-next').style.display = 'none';
+    
+    questionArea.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => this.checkVocabAnswer(e, question));
+    });
+  }
+
+  checkVocabAnswer(e, question) {
+    const selected = e.target.dataset.answer;
+    const isCorrect = selected === question.meaning;
+    
+    this.answers.push({
+      question: question,
+      selected: selected,
+      correct: isCorrect
+    });
+    
+    if (!isCorrect) {
+      const exists = this.wrongWords.find(w => w.id === question.id);
+      if (!exists) {
+        this.wrongWords.push(question);
+        localStorage.setItem('wrongWords', JSON.stringify(this.wrongWords));
+        this.updateWrongCount();
+      }
+    } else {
+      this.wrongWords = this.wrongWords.filter(w => w.id !== question.id);
+      localStorage.setItem('wrongWords', JSON.stringify(this.wrongWords));
+      this.updateWrongCount();
+    }
+    
+    document.querySelectorAll('.option-btn').forEach(btn => {
+      btn.disabled = true;
+      if (btn.dataset.answer === question.meaning) {
+        btn.classList.add('correct');
+      } else if (btn.dataset.answer === selected && !isCorrect) {
+        btn.classList.add('wrong');
+      }
+    });
+    
+    const feedbackArea = document.getElementById('feedback-area');
+    feedbackArea.style.display = 'block';
+    feedbackArea.innerHTML = `
+      <div class="feedback ${isCorrect ? 'correct' : 'wrong'}">
+        <strong>${isCorrect ? '✅ 正確！' : '❌ 錯誤！'}</strong>
+        <p><strong>${question.word}</strong> 的意思是：${question.meaning}</p>
+      </div>
+    `;
+    
+    document.getElementById('btn-next').style.display = 'block';
+  }
+
+  updateWrongCount() {
+    const countEl = document.getElementById('wrong-count');
+    if (countEl) {
+      countEl.textContent = this.wrongWords.length + ' 字';
+    }
+  }
+  
   shuffleArray(array) {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
