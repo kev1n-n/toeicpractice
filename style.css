@@ -779,4 +779,40 @@ body {
     justify-content: center;
     margin-top: 10px;
   }
+  .vocab-question {
+  text-align: center;
+  padding: 20px;
+}
+
+.vocab-word {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  padding: 30px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 15px;
+}
+
+.vocab-prompt {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.vocabulary-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.wrong-words-card {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+}
+
+.vocabulary-card h3,
+.vocabulary-card p,
+.wrong-words-card h3,
+.wrong-words-card p {
+  color: white !important;
+  }
 }
