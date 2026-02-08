@@ -341,7 +341,7 @@ class TOEICApp {
       if (this.currentPart === 'vocab' || this.currentPart === 'wrong-words') {
         this.showVocabQuestion();
       } else {
-        this.showQuestion();
+        this.renderQuestion();
       }
     }
   }
