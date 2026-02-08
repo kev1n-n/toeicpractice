@@ -522,10 +522,10 @@ class TOEICApp {
     history[today].push({
       part: this.currentPart,
       timestamp: Date.now(),
-      questions: this.answers.map((answer, index) => ({ 
-        id: this.currentQuestions[index].id, 
-        isCorrect: answer.isCorrect || answer.correct  // ← 這行改了！
-      }))
+     questions: this.answers.map((answer, index) => ({
+      id: ...,
+      isCorrect: answer.isCorrect === true  // 嚴格布林值
+    }))
     });
     localStorage.setItem('toeic-history', JSON.stringify(history));
     this.updateStatsDisplay();
