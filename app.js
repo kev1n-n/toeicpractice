@@ -523,7 +523,7 @@ class TOEICApp {
       part: this.currentPart,
       timestamp: Date.now(),
      questions: this.answers.map((answer, index) => ({
-      id: ...,
+      id: this.currentQuestions[index].id,
       isCorrect: answer.isCorrect === true  // 嚴格布林值
     }))
     });
